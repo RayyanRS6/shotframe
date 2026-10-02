@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SCENE, mergeScene } from './defaults';
+import { DEFAULT_SCENE, DEFAULT_TEXT_CARD, mergeScene } from './defaults';
 
 describe('mergeScene', () => {
   it('keeps a saved gradient intact instead of mixing in the default preset', () => {
@@ -23,6 +23,17 @@ describe('mergeScene', () => {
   it('keeps a saved background image id', () => {
     const scene = mergeScene({ background: { kind: 'image', image: { id: 'abc', blur: 4, dim: 0.2 } } });
     expect(scene.background.image).toEqual({ id: 'abc', blur: 4, dim: 0.2 });
+  });
+
+  it('keeps screenshots and text cards in order, filling in text card fields added later', () => {
+    const shot = { id: 'a', name: 'shot.png', width: 1200, height: 800 };
+    const scene = mergeScene({
+      images: [shot, { kind: 'text', id: 'b', heading: { content: 'Hello', font: 'gone-font' } }, { kind: 'text' }],
+    });
+    expect(scene.images.map((i) => i.id)).toEqual(['a', 'b']);
+    expect(scene.images[0]).toEqual(shot);
+    expect(scene.images[1]).toMatchObject({ kind: 'text', id: 'b', padding: DEFAULT_TEXT_CARD.padding, shape: 'auto' });
+    expect(scene.images[1]).toMatchObject({ heading: { content: 'Hello', font: DEFAULT_TEXT_CARD.heading.font, size: DEFAULT_TEXT_CARD.heading.size } });
   });
 
   it('migrates legacy browser frames and top/bottom text into the new model', () => {

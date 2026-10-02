@@ -1,23 +1,18 @@
 import { del, get, keys, set } from 'idb-keyval';
-import type { ImageItem, Scene } from '../types/scene';
+import { isTextCard, type ImageItem, type Scene } from '../types/scene';
 import { DEFAULT_SCENE, mergeScene } from './defaults';
 import { useSceneStore } from './sceneStore';
 import { useAssets } from './assets';
 import { toast } from './toast';
+import { newId } from '../utils/id';
 
 // IndexedDB is built into the browser: nothing leaves the device and no account is needed.
 const SCENE_KEY = 'scene:v1';
 const IMG_PREFIX = 'img:';
 const imgKey = (id: string) => `${IMG_PREFIX}${id}`;
 
-function newId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 function referencedIds(scene: Scene): string[] {
-  const ids = scene.images.map((i) => i.id);
+  const ids = scene.images.filter((i) => !isTextCard(i)).map((i) => i.id);
   if (scene.background.image.id) ids.push(scene.background.image.id);
   return ids;
 }
@@ -61,7 +56,7 @@ async function restore(): Promise<void> {
       }),
     );
     const { bitmaps } = useAssets.getState();
-    scene = { ...scene, images: scene.images.filter((i) => bitmaps.has(i.id)) };
+    scene = { ...scene, images: scene.images.filter((i) => isTextCard(i) || bitmaps.has(i.id)) };
     if (scene.background.image.id && !bitmaps.has(scene.background.image.id)) {
       scene = { ...scene, background: { ...scene.background, kind: scene.background.kind === 'image' ? 'gradient' : scene.background.kind, image: { ...scene.background.image, id: null } } };
     }
@@ -91,7 +86,7 @@ async function importBlob(blob: Blob, name: string): Promise<ImageItem | null> {
     toast('Browser storage is full — this image will not survive a refresh', 'error');
   }
   useAssets.getState().put(id, bitmap, blob);
-  return { id, name, width: bitmap.width, height: bitmap.height };
+  return { kind: 'image', id, name, width: bitmap.width, height: bitmap.height };
 }
 
 function imageFiles(files: Iterable<File | Blob>): (File | Blob)[] {

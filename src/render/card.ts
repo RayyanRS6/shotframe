@@ -15,6 +15,8 @@ import {
 import { POLAROID_FONT, ensureFontSpec } from './text';
 
 type Source = CanvasImageSource & { width: number; height: number };
+/** What fills a card: a screenshot, a painter (text cards), or nothing yet (a gray placeholder). */
+export type CardContent = Source | ((ctx: CanvasRenderingContext2D, r: Rect) => void) | undefined;
 
 const LIGHTS = ['#FF5F57', '#FEBC2E', '#28C840'];
 const UI_FONT = '"DM Sans", "Inter", sans-serif';
@@ -41,21 +43,23 @@ export function cardGeometry(p: Placement, style: Style): CardGeometry {
   return { body, radius, inner, innerRadius: Math.max(0, radius - bw) };
 }
 
-function drawShot(ctx: CanvasRenderingContext2D, bitmap: Source | undefined, r: Rect) {
-  if (bitmap) {
-    ctx.drawImage(bitmap, r.x, r.y, r.w, r.h);
+function drawShot(ctx: CanvasRenderingContext2D, content: CardContent, r: Rect) {
+  if (typeof content === 'function') {
+    content(ctx, r);
+  } else if (content) {
+    ctx.drawImage(content, r.x, r.y, r.w, r.h);
   } else {
     ctx.fillStyle = '#D9D9DE';
     ctx.fillRect(r.x, r.y, r.w, r.h);
   }
 }
 
-function clippedShot(ctx: CanvasRenderingContext2D, bitmap: Source | undefined, r: Rect, radius: number) {
+function clippedShot(ctx: CanvasRenderingContext2D, content: CardContent, r: Rect, radius: number) {
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(r.x, r.y, r.w, r.h, Math.max(0, Math.min(radius, r.w / 2, r.h / 2)));
   ctx.clip();
-  drawShot(ctx, bitmap, r);
+  drawShot(ctx, content, r);
   ctx.restore();
 }
 
@@ -223,10 +227,10 @@ function drawWindows(ctx: CanvasRenderingContext2D, r: Rect, style: Style, dark:
   });
 }
 
-function drawDevice(ctx: CanvasRenderingContext2D, inner: Rect, innerRadius: number, image: Rect, bitmap: Source | undefined, bezel: number, dark: boolean, kind: 'mobile' | 'tablet') {
+function drawDevice(ctx: CanvasRenderingContext2D, inner: Rect, innerRadius: number, image: Rect, content: CardContent, bezel: number, dark: boolean, kind: 'mobile' | 'tablet') {
   ctx.fillStyle = dark ? '#0F0F11' : '#E4E4E8';
   ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
-  clippedShot(ctx, bitmap, image, Math.max(0, innerRadius - bezel));
+  clippedShot(ctx, content, image, Math.max(0, innerRadius - bezel));
   if (kind === 'mobile') {
     const w = Math.min(image.w * 0.3, 130);
     const h = w * 0.3;
@@ -245,8 +249,11 @@ function drawDevice(ctx: CanvasRenderingContext2D, inner: Rect, innerRadius: num
   });
 }
 
-/** Draws one screenshot with its frame, border and rounded corners, in reference units. */
-export function drawCard(ctx: CanvasRenderingContext2D, p: Placement, bitmap: Source | undefined, style: Style) {
+/**
+ * Draws one card with its frame, border and rounded corners, in reference units.
+ * `bare` skips the window or device frame and lets the content fill its space.
+ */
+export function drawCard(ctx: CanvasRenderingContext2D, p: Placement, content: CardContent, style: Style, bare = false) {
   const { body, radius, inner, innerRadius } = cardGeometry(p, style);
   const { image } = p;
   const dark = style.frame === 'mac-dark' || (style.frame !== 'mac-light' && style.frameDark);
@@ -265,13 +272,13 @@ export function drawCard(ctx: CanvasRenderingContext2D, p: Placement, bitmap: So
   ctx.roundRect(inner.x, inner.y, inner.w, inner.h, innerRadius);
   ctx.clip();
 
-  switch (style.frame) {
+  switch (bare ? 'none' : style.frame) {
     case 'mac-dark':
     case 'mac-light': {
       bar(ctx, inner, MAC_BAR, dark ? '#2B2B2E' : '#F3F3F5', dark ? '#3A3A3E' : '#E2E2E6');
       drawLights(ctx, inner.x + 22, inner.y + MAC_BAR / 2);
       label(ctx, style.frameTitle, inner.x + inner.w / 2, inner.y + MAC_BAR / 2, inner.w - 200, `600 15px ${UI_FONT}`, dark ? '#CFCFD6' : '#55555C', 'center');
-      drawShot(ctx, bitmap, image);
+      drawShot(ctx, content, image);
       break;
     }
     case 'browser-pill': {
@@ -287,56 +294,56 @@ export function drawCard(ctx: CanvasRenderingContext2D, p: Placement, bitmap: So
         ctx.fill();
         label(ctx, style.frameUrl, px + pillW / 2, cy + 1, pillW - 32, `500 15px ${UI_FONT}`, dark ? '#B4B4BC' : '#77777F', 'center');
       }
-      drawShot(ctx, bitmap, image);
+      drawShot(ctx, content, image);
       break;
     }
     case 'browser-full':
       drawFullBrowser(ctx, inner, style, dark);
-      drawShot(ctx, bitmap, image);
+      drawShot(ctx, content, image);
       break;
     case 'windows':
       drawWindows(ctx, inner, style, dark);
-      drawShot(ctx, bitmap, image);
+      drawShot(ctx, content, image);
       break;
     case 'glass': {
       frostedBackdrop(ctx, inner);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
       ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
-      clippedShot(ctx, bitmap, image, Math.max(0, innerRadius - GLASS_PAD * 0.6));
+      clippedShot(ctx, content, image, Math.max(0, innerRadius - GLASS_PAD * 0.6));
       stroke(ctx, 'rgba(255, 255, 255, 0.55)', 1.5, () => {
         ctx.roundRect(inner.x + 0.75, inner.y + 0.75, inner.w - 1.5, inner.h - 1.5, Math.max(0, innerRadius - 0.75));
       });
       break;
     }
     case 'mobile':
-      drawDevice(ctx, inner, innerRadius, image, bitmap, MOBILE_BEZEL, dark, 'mobile');
+      drawDevice(ctx, inner, innerRadius, image, content, MOBILE_BEZEL, dark, 'mobile');
       break;
     case 'tablet':
-      drawDevice(ctx, inner, innerRadius, image, bitmap, TABLET_BEZEL, dark, 'tablet');
+      drawDevice(ctx, inner, innerRadius, image, content, TABLET_BEZEL, dark, 'tablet');
       break;
     case 'polaroid': {
       ctx.fillStyle = '#FBFBF8';
       ctx.fillRect(inner.x, inner.y, inner.w, inner.h);
-      clippedShot(ctx, bitmap, image, Math.min(4, innerRadius));
+      clippedShot(ctx, content, image, Math.min(4, innerRadius));
       ensureFontSpec(POLAROID_FONT, style.frameTitle);
       label(ctx, style.frameTitle, image.x + image.w / 2, image.y + image.h + POLAROID_BOTTOM / 2, image.w - 24, POLAROID_FONT, '#3A3A3A', 'center');
       break;
     }
     default:
-      drawShot(ctx, bitmap, image);
+      drawShot(ctx, content, bare ? inner : image);
   }
 
   ctx.restore();
 }
 
 /** Rasterizes a card at device resolution, used as the texture for 3D tilt. */
-export function renderCardCanvas(p: Placement, bitmap: Source | undefined, style: Style, scale: number): HTMLCanvasElement {
+export function renderCardCanvas(p: Placement, content: CardContent, style: Style, scale: number, bare = false): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = Math.max(1, Math.ceil(p.card.w * scale));
   canvas.height = Math.max(1, Math.ceil(p.card.h * scale));
   const ctx = canvas.getContext('2d')!;
   ctx.imageSmoothingQuality = 'high';
   ctx.setTransform(scale, 0, 0, scale, -p.card.x * scale, -p.card.y * scale);
-  drawCard(ctx, p, bitmap, style);
+  drawCard(ctx, p, content, style, bare);
   return canvas;
 }

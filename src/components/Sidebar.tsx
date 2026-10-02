@@ -13,12 +13,12 @@ import { useSceneStore } from '../store/sceneStore';
 type SectionId = 'images' | 'canvas' | 'background' | 'layout' | 'style' | 'text' | 'export';
 
 const SECTIONS: { id: SectionId; label: string; title: string; description: string; icon: LucideIcon; Panel: ComponentType }[] = [
-  { id: 'images', label: 'Images', title: 'Screenshots', description: 'Add, reorder and replace the images on your canvas.', icon: Layers, Panel: ImagesPanel },
+  { id: 'images', label: 'Images', title: 'Screenshots & text', description: 'Add screenshots or text cards, then reorder and edit them.', icon: Layers, Panel: ImagesPanel },
   { id: 'canvas', label: 'Canvas', title: 'Canvas ratio', description: 'Pick a size made for where you will post it.', icon: Crop, Panel: CanvasPanel },
   { id: 'background', label: 'Backdrop', title: 'Background', description: 'Gradients, solids or your own image — with grain.', icon: Palette, Panel: BackgroundPanel },
   { id: 'layout', label: 'Layout', title: 'Layout', description: 'Arrange your screenshots and set the spacing.', icon: LayoutGrid, Panel: LayoutPanel },
   { id: 'style', label: 'Style', title: 'Style & frame', description: 'Corners, borders, shadows, frames and 3D tilt.', icon: Frame, Panel: StylePanel },
-  { id: 'text', label: 'Text', title: 'Text', description: 'Add a pill, a heading and a paragraph.', icon: Type, Panel: TextPanel },
+  { id: 'text', label: 'Text', title: 'Text', description: 'Add a pill, a heading and a paragraph. For text in its own card, use Images.', icon: Type, Panel: TextPanel },
   { id: 'export', label: 'Export', title: 'Export', description: 'Download in HD, 2K or 4K — or copy it straight to your post.', icon: Download, Panel: ExportPanel },
 ];
 

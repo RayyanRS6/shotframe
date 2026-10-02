@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
-import type { Background, Caption, ExportSettings, ImageItem, Layout, RatioId, Scene, Style } from '../types/scene';
-import { DEFAULT_SCENE } from './defaults';
+import { isTextCard, type Background, type Caption, type ExportSettings, type ImageItem, type Layout, type RatioId, type Scene, type Style, type TextCardItem } from '../types/scene';
+import { DEFAULT_SCENE, DEFAULT_TEXT_CARD } from './defaults';
 import { isFlippable, ratioPreset } from '../presets/ratios';
+import { newId } from '../utils/id';
 
 export type TextRole = 'pill' | 'heading' | 'paragraph';
 
@@ -22,6 +23,10 @@ interface SceneState {
   patchExport: (patch: Partial<ExportSettings>) => void;
 
   addImages: (items: ImageItem[]) => void;
+  /** Appends a text card with fresh text, styled like the last one, and selects it. */
+  addTextCard: () => void;
+  patchTextCard: (id: string, patch: Partial<Omit<TextCardItem, 'id' | 'kind'>>) => void;
+  /** Removes a screenshot or text card. */
   removeImage: (id: string) => void;
   replaceImage: (id: string, item: ImageItem) => void;
   moveImage: (from: number, to: number) => void;
@@ -60,6 +65,19 @@ export const useSceneStore = create<SceneState>()(
           if (!items.length) return;
           set((st) => ({ scene: { ...st.scene, images: [...st.scene.images, ...items] }, selectedId: items[items.length - 1].id }));
         },
+        addTextCard: () =>
+          set((st) => {
+            const last = st.scene.images.filter(isTextCard).pop() ?? DEFAULT_TEXT_CARD;
+            const card: TextCardItem = {
+              ...last,
+              id: newId(),
+              heading: { ...last.heading, content: DEFAULT_TEXT_CARD.heading.content },
+              body: { ...last.body, content: DEFAULT_TEXT_CARD.body.content },
+            };
+            return { scene: { ...st.scene, images: [...st.scene.images, card] }, selectedId: card.id };
+          }),
+        patchTextCard: (id, patch) =>
+          edit((s) => ({ ...s, images: s.images.map((i) => (i.id === id && isTextCard(i) ? { ...i, ...patch } : i)) })),
         removeImage: (id) =>
           set((st) => ({
             scene: { ...st.scene, images: st.scene.images.filter((i) => i.id !== id) },

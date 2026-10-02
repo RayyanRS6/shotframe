@@ -24,6 +24,9 @@ npm test           # unit tests (layout math, export sizes)
 
 - **Images** — browse, drag-drop anywhere, or paste (Ctrl+V). Reorder by dragging in the list or
   with the ← → buttons that appear on each image in the canvas; replace or remove.
+- **Text cards** — a heading and paragraph in their own card, laid out, reordered, framed and tilted
+  like a screenshot. The shape fits the text or is fixed (1:1, 4:3, 4:5, 16:9, 9:16; long text
+  shrinks to fit), with card color, width, padding, alignment and the full font controls.
 - **Canvas ratio** — Auto Fit (shrinkwraps to images & text), 16:9, 1:1, 4:3, 2:1, 3:2, 4:5,
   9:16 and 3:1, each labelled with what it's for. Click the selected ratio again to flip it
   (4:3 → 3:4; 16:9 and 9:16 switch to each other).
@@ -39,7 +42,7 @@ npm test           # unit tests (layout math, export sizes)
   with weight, size, color, letter spacing, line height and alignment.
 - **Export** — HD (1920), 2K (2560) or 4K UHD (3840) on the long edge · PNG, JPG or WebP ·
   copy to clipboard.
-- **Undo / redo** — Ctrl+Z / Ctrl+Shift+Z. Delete removes the selected image.
+- **Undo / redo** — Ctrl+Z / Ctrl+Shift+Z. Delete removes the selected image or text card.
 
 ## How it works
 

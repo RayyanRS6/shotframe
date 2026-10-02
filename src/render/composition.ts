@@ -1,4 +1,4 @@
-import type { Rect, Scene } from '../types/scene';
+import { isTextCard, type Rect, type Scene } from '../types/scene';
 import { REF_LONG_EDGE, ratioView } from '../presets/ratios';
 import { NO_CHROME, cardChrome } from '../presets/frames';
 import {
@@ -13,6 +13,7 @@ import {
   type ResolvedDirection,
 } from './layout';
 import { captionGap, layoutCaption, type CaptionLayout } from './text';
+import { textCardAspect } from './textCard';
 import { isTilted, projectedBounds } from './tilt';
 
 export interface PlacedCaption {
@@ -40,7 +41,7 @@ function shift(r: Rect, dy: number): Rect {
 /** Everything the renderer needs to know about where things go, in reference units. */
 export function composeScene(scene: Scene, ctx: CanvasRenderingContext2D): Composition {
   const { layout, style, caption } = scene;
-  const aspects = scene.images.map((i) => i.width / Math.max(1, i.height));
+  const aspects = scene.images.map((i) => (isTextCard(i) ? textCardAspect(ctx, i) : i.width / Math.max(1, i.height)));
   const chrome = cardChrome(style);
   const ex = chrome.left + chrome.right, ey = chrome.top + chrome.bottom;
   const pad = layout.padding;
