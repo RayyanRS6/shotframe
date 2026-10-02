@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useStore } from 'zustand';
 import { Copy, Download, FilePlus, LoaderCircle, Redo2, Undo2 } from 'lucide-react';
-import type { RatioId, Scene } from '../types/scene';
+import { isTextCard, type RatioId, type Scene } from '../types/scene';
 import { Button } from './ui/Button';
 import { Select } from './ui/Select';
 import { Logo } from './Logo';
@@ -18,7 +18,7 @@ function StatStrip({ scene, size }: { scene: Scene; size: { width: number; heigh
   const stats = [
     { label: 'Export size', value: `${size.width} × ${size.height}` },
     { label: 'Quality', value: `${tier.label} · ${format}` },
-    { label: 'Screenshots', value: String(scene.images.length) },
+    { label: 'Screenshots', value: String(scene.images.filter((i) => !isTextCard(i)).length) },
     { label: 'Canvas', value: ratio.title },
   ];
   return (
@@ -43,7 +43,7 @@ export function MainHeader() {
   const ratio = ratioView(scene.ratio, scene.ratioFlipped);
 
   const onNew = () => {
-    if (!scene.images.length || window.confirm('Start a new canvas? Your current images will be removed.')) void newCanvas();
+    if (!scene.images.length || window.confirm('Start a new canvas? Your current images and text cards will be removed.')) void newCanvas();
   };
 
   return (

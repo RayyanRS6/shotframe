@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Trash, Upload } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ImagePlus, Trash, Type, Upload } from 'lucide-react';
+import { isTextCard } from '../types/scene';
 import { Button } from './ui/Button';
 import { useSceneStore } from '../store/sceneStore';
 import { useAssets } from '../store/assets';
@@ -37,6 +38,7 @@ export function CanvasPreview() {
   const select = useSceneStore((s) => s.select);
   const moveImage = useSceneStore((s) => s.moveImage);
   const removeImage = useSceneStore((s) => s.removeImage);
+  const addTextCard = useSceneStore((s) => s.addTextCard);
   const assetsVersion = useAssets((s) => s.version);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -93,6 +95,8 @@ export function CanvasPreview() {
   };
 
   const count = scene.images.length;
+  const textCount = scene.images.filter(isTextCard).length;
+  const shotCount = count - textCount;
   const selectedIndex = scene.images.findIndex((i) => i.id === selectedId);
   const toolbarIndex = count > 1 ? (hover ?? (selectedIndex >= 0 ? selectedIndex : null)) : null;
   const toolbarPlacement = toolbarIndex !== null ? comp.placements[toolbarIndex] : undefined;
@@ -119,7 +123,8 @@ export function CanvasPreview() {
           </span>
           <span className="hidden items-center gap-1.5 text-xs text-stone sm:flex">
             <span className="size-2 rounded-full bg-violet" />
-            {count} {count === 1 ? 'screenshot' : 'screenshots'}
+            {shotCount} {shotCount === 1 ? 'screenshot' : 'screenshots'}
+            {textCount > 0 && ` · ${textCount} text ${textCount === 1 ? 'card' : 'cards'}`}
           </span>
           <span className="ml-auto rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-lime tabular-nums">
             {size.width} × {size.height} px
@@ -149,7 +154,7 @@ export function CanvasPreview() {
 
             {toolbarIndex !== null && toolbarPlacement && (() => {
               const r = toolbarPlacement.slot ?? toolbarPlacement.card;
-              const id = scene.images[toolbarIndex]?.id;
+              const item = scene.images[toolbarIndex];
               return (
                 <div
                   data-card-toolbar
@@ -163,10 +168,10 @@ export function CanvasPreview() {
                     {vertical ? <ArrowDown /> : <ArrowRight />}
                   </ToolbarButton>
                   <ToolbarButton
-                    label="Remove image"
+                    label={item && isTextCard(item) ? 'Remove text card' : 'Remove image'}
                     danger
                     onClick={() => {
-                      if (id) removeImage(id);
+                      if (item) removeImage(item.id);
                       setHover(null);
                     }}
                   >
@@ -184,9 +189,14 @@ export function CanvasPreview() {
                   </span>
                   <p className="font-display text-[18px] font-bold text-ink">Drop, paste, or browse screenshots</p>
                   <p className="hidden text-xs text-stone sm:block">PNG, JPG or WebP · everything stays on your device</p>
-                  <Button variant="primary" className="mt-1" onClick={() => fileRef.current?.click()}>
-                    <Upload /> Browse files
-                  </Button>
+                  <div className="mt-1 flex flex-wrap justify-center gap-2">
+                    <Button variant="primary" onClick={() => fileRef.current?.click()}>
+                      <Upload /> Browse files
+                    </Button>
+                    <Button variant="light" onClick={addTextCard}>
+                      <Type /> Add text card
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

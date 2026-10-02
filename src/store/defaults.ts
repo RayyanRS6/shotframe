@@ -1,4 +1,4 @@
-import type { Gradient, MeshBlob, Scene, TextBlock } from '../types/scene';
+import type { Gradient, MeshBlob, Scene, SceneItem, TextBlock, TextCardItem } from '../types/scene';
 import { DEFAULT_PRESET_ID, presetById, presetToGradient } from '../presets/gradients';
 import { FRAME_OPTIONS } from '../presets/frames';
 import { FONTS } from '../presets/fonts';
@@ -64,6 +64,37 @@ export const DEFAULT_SCENE: Scene = {
   export: { tier: 'uhd', format: 'png', quality: 0.92 },
 };
 
+export const DEFAULT_TEXT_CARD: Omit<TextCardItem, 'id'> = {
+  kind: 'text',
+  heading: {
+    enabled: true,
+    content: 'What changed',
+    font: 'plus-jakarta-sans',
+    weight: 800,
+    size: 56,
+    color: '#151515',
+    lineHeight: 1.12,
+    letterSpacing: -0.02,
+  },
+  body: {
+    enabled: true,
+    content: 'Cleaner metric cards, a calmer palette and a chart you can read at a glance.',
+    font: 'plus-jakarta-sans',
+    weight: 400,
+    size: 30,
+    color: '#55555C',
+    lineHeight: 1.45,
+    letterSpacing: 0,
+  },
+  align: 'left',
+  verticalAlign: 'middle',
+  background: '#FFFFFF',
+  shape: 'auto',
+  width: 800,
+  padding: 64,
+  frame: false,
+};
+
 function isObj(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
 }
@@ -110,10 +141,25 @@ function legacyText(saved: unknown, base: TextBlock): TextBlock {
   };
 }
 
+const validFont = (b: TextBlock, fallback: TextBlock) => (FONTS.some((f) => f.id === b.font) ? b.font : fallback.font);
+
+/** Saved items are kept as they are, except text cards, which get fields added since they were saved. */
+function savedItems(items: SceneItem[]): SceneItem[] {
+  return items.flatMap((item): SceneItem[] => {
+    if (!isObj(item) || typeof item.id !== 'string') return [];
+    if (item.kind !== 'text') return [item];
+    const card = { ...merge(DEFAULT_TEXT_CARD, item), id: item.id };
+    card.heading = { ...card.heading, font: validFont(card.heading, DEFAULT_TEXT_CARD.heading) };
+    card.body = { ...card.body, font: validFont(card.body, DEFAULT_TEXT_CARD.body) };
+    return [card];
+  });
+}
+
 export function mergeScene(saved: unknown): Scene {
   const scene = merge(DEFAULT_SCENE, saved);
   const gradient = savedGradient(saved);
   if (gradient) scene.background = { ...scene.background, gradient };
+  scene.images = savedItems(scene.images);
   if (!isObj(saved)) return scene;
 
   const savedFrame = isObj(saved.style) ? saved.style.frame : undefined;
@@ -129,7 +175,6 @@ export function mergeScene(saved: unknown): Scene {
     scene.caption = { ...scene.caption, heading, paragraph, position: heading.enabled || !paragraph.enabled ? 'top' : 'bottom' };
   }
 
-  const validFont = (b: TextBlock, fallback: TextBlock) => (FONTS.some((f) => f.id === b.font) ? b.font : fallback.font);
   const c = scene.caption;
   scene.caption = {
     ...c,

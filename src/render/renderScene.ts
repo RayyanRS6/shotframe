@@ -1,20 +1,27 @@
-import type { Scene, Style } from '../types/scene';
+import { isTextCard, type Scene, type SceneItem, type Style } from '../types/scene';
 import type { Placement } from './layout';
 import { composeScene, type Composition } from './composition';
 import { drawBackground } from './background';
-import { cardGeometry, drawCard, renderCardCanvas } from './card';
+import { cardGeometry, drawCard, renderCardCanvas, type CardContent } from './card';
 import { drawShadow } from './shadow';
 import { captionBlocks, drawCaption, ensureFont } from './text';
+import { drawTextCard, textCardFontsReady } from './textCard';
 import { isTilted, projectedOutline, tiltSupported, warpCard } from './tilt';
 
 export type Bitmaps = Map<string, ImageBitmap>;
 
 const cardCache = new Map<string, HTMLCanvasElement>();
 
-function cachedCard(id: string, p: Placement, bmp: ImageBitmap | undefined, style: Style, scale: number) {
+function cardContent(item: SceneItem, bitmaps: Bitmaps): CardContent {
+  return isTextCard(item) ? (ctx, r) => drawTextCard(ctx, item, r) : bitmaps.get(item.id);
+}
+
+function cachedCard(item: SceneItem, p: Placement, content: CardContent, bare: boolean, style: Style, scale: number) {
   const key = [
-    id,
-    !!bmp,
+    item.id,
+    !!content,
+    // Text cards are redrawn when their text, style or font readiness changes.
+    isTextCard(item) ? `${JSON.stringify(item)}|${textCardFontsReady(item)}|${bare}` : '',
     style.frame,
     style.radius,
     style.border.width,
@@ -28,7 +35,7 @@ function cachedCard(id: string, p: Placement, bmp: ImageBitmap | undefined, styl
   ].join('|');
   let canvas = cardCache.get(key);
   if (!canvas) {
-    canvas = renderCardCanvas(p, bmp, style, scale);
+    canvas = renderCardCanvas(p, content, style, scale, bare);
     cardCache.set(key, canvas);
     if (cardCache.size > 24) cardCache.delete(cardCache.keys().next().value!);
   }
@@ -83,15 +90,18 @@ export function renderScene(
 
   c.placements.forEach((p, i) => {
     const item = scene.images[i];
-    const bmp = item ? bitmaps.get(item.id) : undefined;
+    const content = item ? cardContent(item, bitmaps) : undefined;
+    const bare = !!item && isTextCard(item) && !item.frame;
+    // Starts loading a text card's fonts; the preview redraws when they arrive.
+    if (item && isTextCard(item)) textCardFontsReady(item);
     if (tilted && item) {
-      const out = warpCard(cachedCard(item.id, p, bmp, style, sx), p.card, style.tilt, sx, p.slot);
+      const out = warpCard(cachedCard(item, p, content, bare, style, sx), p.card, style.tilt, sx, p.slot);
       if (out) {
         ctx.drawImage(out.canvas, out.x, out.y, out.w, out.h);
         return;
       }
     }
-    drawCard(ctx, p, bmp, style);
+    drawCard(ctx, p, content, style, bare);
   });
 
   if (c.caption) {

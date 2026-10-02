@@ -16,6 +16,9 @@ export type FrameKind =
   | 'polaroid'
   | 'stack';
 export type TextAlign = 'left' | 'center' | 'right';
+export type VerticalAlign = 'top' | 'middle' | 'bottom';
+/** 'auto' hugs the text; the rest are fixed width:height shapes. */
+export type TextCardShape = 'auto' | '1:1' | '4:3' | '4:5' | '16:9' | '9:16';
 export type CaptionPosition = 'top' | 'bottom';
 export type ExportTier = 'hd' | '2k' | 'uhd';
 export type ExportFormat = 'png' | 'jpeg' | 'webp';
@@ -38,6 +41,8 @@ export type FontId =
 
 /** Metadata for an uploaded screenshot. The Blob lives in IndexedDB, the decoded bitmap in memory. */
 export interface ImageItem {
+  /** Missing on screenshots saved before text cards existed. */
+  kind?: 'image';
   id: string;
   name: string;
   width: number;
@@ -127,6 +132,32 @@ export interface PillBlock extends TextBlock {
   uppercase: boolean;
 }
 
+/**
+ * A card that holds text instead of a screenshot. It is laid out, framed and tilted like one,
+ * and scales with its slot: sizes are px on a card `width` wide.
+ */
+export interface TextCardItem {
+  kind: 'text';
+  id: string;
+  heading: TextBlock;
+  body: TextBlock;
+  align: TextAlign;
+  verticalAlign: VerticalAlign;
+  background: string;
+  shape: TextCardShape;
+  width: number;
+  padding: number;
+  /** Also draw the window or device frame around the card (off: the card fills the frame's space). */
+  frame: boolean;
+}
+
+/** One card on the canvas. */
+export type SceneItem = ImageItem | TextCardItem;
+
+export function isTextCard(item: SceneItem): item is TextCardItem {
+  return item.kind === 'text';
+}
+
 /** Pill, heading and paragraph stacked above or below the screenshots. */
 export interface Caption {
   position: CaptionPosition;
@@ -143,7 +174,8 @@ export interface ExportSettings {
 }
 
 export interface Scene {
-  images: ImageItem[];
+  /** Screenshots and text cards, in layout order (named before text cards existed). */
+  images: SceneItem[];
   ratio: RatioId;
   /** Swap width and height of the chosen ratio (4:3 → 3:4). */
   ratioFlipped: boolean;

@@ -54,7 +54,8 @@ export const POLAROID_FONT = '500 34px "Caveat", cursive';
 
 export async function loadSceneFonts(scene: Scene): Promise<void> {
   if (typeof document === 'undefined' || !document.fonts) return;
-  const loads = captionBlocks(scene.caption).map((b) => document.fonts.load(fontSpec(b.font, b.weight, 40), textOf(b)));
+  const cardBlocks = scene.images.flatMap((i) => (i.kind === 'text' ? [i.heading, i.body] : [])).filter(isTextVisible);
+  const loads = [...captionBlocks(scene.caption), ...cardBlocks].map((b) => document.fonts.load(fontSpec(b.font, b.weight, 40), textOf(b)));
   if (scene.style.frame === 'polaroid') loads.push(document.fonts.load(POLAROID_FONT, scene.style.frameTitle || ' '));
   await Promise.all(loads.map((p) => p.catch(() => [])));
 }
@@ -119,7 +120,7 @@ export function layoutText(ctx: CanvasRenderingContext2D, block: TextBlock, maxW
   return { block, lines, width, height: lines.length * lineHeight, lineHeight };
 }
 
-function drawLines(ctx: CanvasRenderingContext2D, t: TextLayout, left: number, top: number, width: number, align: TextAlign) {
+export function drawLines(ctx: CanvasRenderingContext2D, t: TextLayout, left: number, top: number, width: number, align: TextAlign) {
   ctx.save();
   applyFont(ctx, t.block);
   ctx.fillStyle = t.block.color;
