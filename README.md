@@ -6,6 +6,8 @@ with rounded corners, shadows, window frames, 3D tilt and captions — then expo
 Everything runs in your browser. Images are kept in the browser's built-in storage (IndexedDB),
 so your canvas survives a refresh. Nothing is uploaded, and there are no accounts or services.
 
+**Live:** [shotframeapp.vercel.app](https://shotframeapp.vercel.app)
+
 ## Run it
 
 ```bash
